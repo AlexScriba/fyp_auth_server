@@ -10,18 +10,21 @@ from sklearn import *
 
 import pickle
 
+# Path to models dir
 MODELS_PATH = './models'
 
+# Path to actual models
 MLP_MODEL_PATH = os.path.join(MODELS_PATH, 'mlp_model.pkl')
 KM_MODEL_PATH = os.path.join(MODELS_PATH, 'km_model.pkl')
 SCALER_PATH = os.path.join(MODELS_PATH, 'scaler.pkl')
 TF_TRANSFORMER_PATH = os.path.join(MODELS_PATH, 'tf_transformer.pkl')
 
-# Normal: 7300, 100
+# Constants for data shape
 NUM_DATA_POINTS = 7000
 NUM_WORDS_IN_BOW = 80
 
 
+# Load all models from their paths
 def load_model(path):
     with open(path, 'rb') as f:
         return pickle.load(f)
@@ -33,6 +36,7 @@ scaler = load_model(SCALER_PATH)
 tf_tranformer = load_model(TF_TRANSFORMER_PATH)
 
 
+# Function to interpolate data points using cubic interpolation
 def interpolate(data, numAfter):
     timeStamps = np.array(list(map(lambda x: x[-1], data)))
 
@@ -50,6 +54,7 @@ def interpolate(data, numAfter):
     return np.array(res).transpose(1, 0)
 
 
+# Function to combine the 4 data streams into one data vector
 def combineData(requestData):
     accData = requestData['accelerometer']
     gravData = requestData['gravity']
@@ -70,6 +75,7 @@ def combineData(requestData):
     return np.array(retData)
 
 
+# Function to transform input values to BOW encoding
 def bow_transform(input):
     numwords = NUM_WORDS_IN_BOW
     w = km_model.predict(input)
@@ -78,12 +84,14 @@ def bow_transform(input):
     return bw
 
 
+# Function to apply low-pass Butterworth filter to data
 def lowPassFilter(y):
     sos = signal.butter(10, 7, 'low', fs=1000, output='sos')
     filtered = signal.sosfilt(sos, y)
     return filtered
 
 
+# Function to handle pre-processing logic and prediction using models
 def prediction(request_data):
     req_data = {}
     for key in request_data:
@@ -100,12 +108,7 @@ def prediction(request_data):
     bow = bow_transform(scaled_data)
     tfidf = tf_tranformer.transform([bow])[0]
 
-    print(tfidf.shape)
-
     pred = mlp_model.predict(tfidf)[0]
     pred_proba = mlp_model.predict_proba(tfidf)[0]
-    # pred_proba = [0, 0]
-    print(pred_proba)
-    print(pred)
 
     return (int(pred), pred_proba[0], pred_proba[1])

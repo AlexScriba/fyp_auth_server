@@ -2,20 +2,18 @@ from flask import Flask, jsonify, request
 import src.mlp as m
 
 
+# Create Flask App
 app = Flask(__name__)
 
-
-@app.route("/", methods=['GET'])
-def home():
-    return "Hello world"
+# Route handler for /predict route
+# Receives data from request and runs authentication module
 
 
 @app.route("/predict", methods=['POST'])
 def get_prediction():
-    data = request.get_json()['body']
+    data = request.get_json()
 
-    print(data.keys())
-
+    # get prediction
     (pred, proba_attacker, proba_user) = m.prediction(data)
 
     return {
